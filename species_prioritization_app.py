@@ -6,6 +6,17 @@ Created on Wed Dec 17 11:46:07 2025
 """
 
 import streamlit as st
+with st.sidebar:
+    st.header("About")
+    st.markdown("""
+    **Species Prioritization App**
+
+    **Author:** Zishan AHmad Wani, Abdul Rahim PP, Javid Ahmad Dar  
+    **Affiliation:** Terrestrial Ecology and Modelling (TEaM) Lab, SRM University-AP  
+    **Version:** v1.0  
+    **Year:** 2025
+    """)
+
 import pandas as pd
 from io import BytesIO
 
@@ -223,3 +234,4 @@ with tabs[2]:
         data=buffer.getvalue(),
         file_name="criteria_species_priority.xlsx"
     )
+

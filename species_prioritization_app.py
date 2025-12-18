@@ -32,7 +32,7 @@ def score_species(df):
         "Endangered": 4,
         "Vulnerable": 3,
         "Near Threatened": 2,
-        "Least Concern": 1
+        "Other": 1
     }).fillna(0) * 3
 
     df["Endemism_Score"] = df["Endemism"].map({
@@ -234,5 +234,6 @@ with tabs[2]:
         data=buffer.getvalue(),
         file_name="criteria_species_priority.xlsx"
     )
+
 
 

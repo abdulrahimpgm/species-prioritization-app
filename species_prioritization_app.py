@@ -127,7 +127,7 @@ with tabs[1]:
         iucn = st.selectbox(
             "IUCN Status",
             ["Critically Endangered", "Endangered", "Vulnerable",
-             "Near Threatened", "Least Concern"]
+             "Near Threatened", "Other"]
         )
         endemism = st.selectbox("Endemism", ["Yes", "No"])
         threat = st.slider("Threat Level (1–5)", 1, 5, 3)
@@ -234,6 +234,7 @@ with tabs[2]:
         data=buffer.getvalue(),
         file_name="criteria_species_priority.xlsx"
     )
+
 
 
 

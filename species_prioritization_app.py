@@ -11,8 +11,8 @@ with st.sidebar:
     st.markdown("""
     **Species Prioritization App**
 
-    **Author:** Zishan Ahmad Wani, Abdul Rahim PP, Javid Ahmad Dar  
-    **Affiliation:** Terrestrial Ecology and Modelling (TEaM) Lab, SRM University-AP  
+    **Author:** Zishan Ahmad Wani, Abdul Rahim PP, Javid Ahmad Dar, and Shreekar Pant  
+    **Affiliation:** Terrestrial Ecology and Modelling (TEaM) Lab, SRM University-AP, Centre for Biodiversity Studies, Baba Ghulam Shah Badshah University, Rajouri, Jammu and Kashmir, India  
     **Version:** v1.0  
     **Year:** 2025
     """)
@@ -234,6 +234,7 @@ with tabs[2]:
         data=buffer.getvalue(),
         file_name="criteria_species_priority.xlsx"
     )
+
 
 
 

@@ -215,7 +215,7 @@ with tabs[2]:
             "Number of uses by people"
         ],
         "Scoring": [
-            "CR=5, EN=4, VU=3, NT=2, LC=1 (×3)",
+            "CR=5, EN=4, VU=3, NT=2, Other=1 (×3)",
             "Yes=2, No=1 (×2)",
             "Score 1–5 (×3)",
             "<500=4, 501-1000=3, 1001-1500=2, >1500=1 (×1)",
@@ -234,6 +234,7 @@ with tabs[2]:
         data=buffer.getvalue(),
         file_name="criteria_species_priority.xlsx"
     )
+
 
 
 

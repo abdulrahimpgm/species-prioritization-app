@@ -74,11 +74,11 @@ def score_species(df):
     )
 
     df["Priority"] = df["Total_Score"].apply(
-        lambda x: "Critical" if x >= 39 else
-                  "High" if x >= 32 else
-                  "Medium" if x >= 24 else
-                  "Low"
-    )
+    lambda x: "Critical" if x >= 43 else
+              "High" if 34 <= x < 43 else
+              "Medium" if 26 <= x < 34 else
+              "Low"
+)
 
     return df
 
@@ -234,6 +234,7 @@ with tabs[2]:
         data=buffer.getvalue(),
         file_name="criteria_species_priority.xlsx"
     )
+
 
 
 

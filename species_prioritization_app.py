@@ -19,6 +19,7 @@ with st.sidebar:
 
 import pandas as pd
 from io import BytesIO
+from pathlib import Path
 
 # ---------------------------------------------------
 # Scoring function (DIRECT TRANSLATION from R)
@@ -183,21 +184,14 @@ with tabs[1]:
 with tabs[2]:
     st.subheader("Download Sample Files")
 
-    sample_df = pd.DataFrame({
-        "Species_Name": ["Species A", "Species B"],
-        "IUCN_Status": ["Endangered", "Vulnerable"],
-        "Endemism": ["Yes", "No"],
-        "Threat_Level": [3, 2],
-        "Altitudinal_Range": ["501-1000", "1001-1500"],
-        "Exploitation": ["Local use", "Not exploited"],
-        "Habitat_Specificity": [2, 1],
-        "Use_Value": [2, 1]
-    })
+    # Serve the sample CSV that lives in the repo (same folder as this script)
+    sample_path = Path(__file__).parent / "sample_species_data.csv"
 
     st.download_button(
         "Download Sample CSV",
-        sample_df.to_csv(index=False),
-        file_name="sample_species_data.csv"
+        data=sample_path.read_bytes(),
+        file_name="sample_species_data.csv",
+        mime="text/csv"
     )
 
     criteria_df = pd.DataFrame({
@@ -234,12 +228,3 @@ with tabs[2]:
         data=buffer.getvalue(),
         file_name="criteria_species_priority.xlsx"
     )
-
-
-
-
-
-
-
-
-

@@ -1,7 +1,7 @@
 # Species Prioritization Tool
 
-**Author:** Zishan Ahmad Wani, Abdul Rahim P. P, and Javid Ahmad Dar 
-**Affiliation:** TEaM (Terrestrial Ecology and Modelling) Lab, SRM University-AP, India 
+**Author:** Zishan Ahmad Wani and Abdul Rahim P. P 
+**Affiliation:** KAUST- Saudi Arabia, and SRM University-AP- India 
 **Year:** 2025  
 
 ---

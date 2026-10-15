@@ -11,8 +11,8 @@ with st.sidebar:
     st.markdown("""
     **Species Prioritization App**
 
-    **Author:** Zishan Ahmad Wani, Abdul Rahim PP, Javid Ahmad Dar, and Shreekar Pant  
-    **Affiliation:** Terrestrial Ecology and Modelling (TEaM) Lab, SRM University-AP, India, Centre for Biodiversity Studies, Baba Ghulam Shah Badshah University, Rajouri, Jammu and Kashmir, India   
+    **Author:** Zishan Ahmad Wani, Abdul Rahim PP 
+    **Affiliation:**  King Abdullah University of Science and Technology (KAUST)- Saudi Arabia, SRM University-AP, India.   
     **Version:** v1.0  
     **Year:** 2025
     """)

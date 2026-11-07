@@ -11,9 +11,18 @@ with st.sidebar:
     st.markdown("""
     **Species Prioritization App**
 
-    **Author:** Zishan Ahmad Wani, Abdul Rahim PP 
-    **Affiliation:**  King Abdullah University of Science and Technology (KAUST)- Saudi Arabia, SRM University-AP, India.   
-    **Version:** v1.0  
+    **Developers**
+
+    **1. Zishan Ahmad Wani**
+
+    King Abdullah University of Science and Technology (KAUST), Saudi Arabia
+
+    **2. Abdul Rahim PP**
+
+    SRM University-AP, India
+
+    **Version:** v1.0
+
     **Year:** 2025
     """)
 

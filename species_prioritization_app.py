@@ -23,7 +23,7 @@ with st.sidebar:
 
     **Version:** v1.0
 
-    **Year:** 2025
+    **Year:** 2026
     """)
 
 import pandas as pd

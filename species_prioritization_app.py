@@ -22,64 +22,137 @@ from io import BytesIO
 from pathlib import Path
 
 # ---------------------------------------------------
-# Scoring function (DIRECT TRANSLATION from R)
+# Scoring setup
+# ---------------------------------------------------
+REQUIRED_COLUMNS = [
+    "Species_Name", "Endemism", "Population_size", "Site_occupancy",
+    "Altitudinal_Range", "Habitat_Specificity", "Exploitation", "Threat_Level"
+]
+
+MAX_SCORE = 51  # 9 + 8 + 6 + 4 + 8 + 6 + 10
+
+ENDEMISM_MAP = {"endemic": 3, "near endemic": 2, "non endemic": 1}
+EXPLOITATION_MAP = {
+    "not exploited": 1,
+    "local use": 2, "local": 2,
+    "commercial use": 3, "commercial": 3
+}
+
+# Range-type criteria: text categories (after cleaning) + numeric bins
+# (upper bound inclusive, points) so plain numbers are scored too.
+INF = float("inf")
+POPULATION_MAP = {"<50": 4, "51-250": 3, "250-500": 2, "251-500": 2, ">500": 1}
+POPULATION_BINS = [(50, 4), (250, 3), (500, 2), (INF, 1)]
+SITE_MAP = {"1": 4, "2-5": 3, "6-10": 2, ">10": 1}
+SITE_BINS = [(1, 4), (5, 3), (10, 2), (INF, 1)]
+ALTITUDE_MAP = {"<500": 4, "501-1000": 3, "1001-1500": 2, ">1500": 1}
+ALTITUDE_BINS = [(500, 4), (1000, 3), (1500, 2), (INF, 1)]
+HABITAT_BINS = [(1, 4), (2, 3), (3, 2), (INF, 1)]
+
+
+def _clean_text(x):
+    return " ".join(str(x).strip().lower().replace("-", " ").split())
+
+
+def _clean_range(x):
+    s = str(x).strip().lower()
+    for dash in ["–", "—", "−"]:
+        s = s.replace(dash, "-")
+    for word in ["individuals", "individual", "locations", "location",
+                 "habitats", "habitat", "m", " "]:
+        s = s.replace(word, "")
+    return s
+
+
+def _range_points(x, mapping, bins):
+    if pd.isna(x):
+        return None
+    s = _clean_range(x)
+    if s in mapping:
+        return mapping[s]
+    try:
+        v = float(s)
+    except ValueError:
+        return None
+    for upper, pts in bins:
+        if v <= upper:
+            return pts
+    return None
+
+
+def _points(series, func):
+    return pd.to_numeric(series.apply(func), errors="coerce")
+
+
+def _raw_points(df):
+    """Points per criterion before weighting; NaN = value not recognised."""
+    pts = pd.DataFrame(index=df.index)
+    pts["Endemism"] = _points(df["Endemism"], lambda x: ENDEMISM_MAP.get(_clean_text(x)))
+    pts["Population_size"] = _points(df["Population_size"], lambda x: _range_points(x, POPULATION_MAP, POPULATION_BINS))
+    pts["Site_occupancy"] = _points(df["Site_occupancy"], lambda x: _range_points(x, SITE_MAP, SITE_BINS))
+    pts["Altitudinal_Range"] = _points(df["Altitudinal_Range"], lambda x: _range_points(x, ALTITUDE_MAP, ALTITUDE_BINS))
+    pts["Habitat_Specificity"] = _points(df["Habitat_Specificity"], lambda x: _range_points(x, {}, HABITAT_BINS))
+    pts["Exploitation"] = _points(df["Exploitation"], lambda x: EXPLOITATION_MAP.get(_clean_text(x)))
+    pts["Threat_Level"] = pd.to_numeric(df["Threat_Level"], errors="coerce").where(lambda s: s.between(1, 5))
+    return pts
+
+
+def prepare_columns(df):
+    """Tidy column names (case-insensitive) and drop empty trailing columns/rows."""
+    lookup = {c.lower(): c for c in REQUIRED_COLUMNS}
+    df = df.rename(columns=lambda c: lookup.get(str(c).strip().lower(), str(c).strip()))
+    empty_unnamed = [c for c in df.columns if c.startswith("Unnamed") and df[c].isna().all()]
+    df = df.drop(columns=empty_unnamed).dropna(how="all")
+    return df
+
+
+def find_unrecognised(df):
+    """List every cell whose value could not be scored (it would score 0)."""
+    pts = _raw_points(df)
+    rows = []
+    for col in pts.columns:
+        for i in df.index[pts[col].isna()]:
+            rows.append({
+                "Species_Name": str(df.loc[i, "Species_Name"]),
+                "Column": col,
+                "Value": str(df.loc[i, col])
+            })
+    return pd.DataFrame(rows)
+
+
+# ---------------------------------------------------
+# Scoring function (maximum score = 51)
 # ---------------------------------------------------
 def score_species(df):
 
     df = df.copy()
+    pts = _raw_points(df).fillna(0)
 
-    df["IUCN_Score"] = df["IUCN_Status"].map({
-        "Critically Endangered": 5,
-        "Endangered": 4,
-        "Vulnerable": 3,
-        "Near Threatened": 2,
-        "Other": 1
-    }).fillna(0) * 3
-
-    df["Endemism_Score"] = df["Endemism"].map({
-        "Yes": 2,
-        "No": 1
-    }).fillna(0) * 2
-
-    df["Threat_Score"] = df["Threat_Level"] * 3
-
-    df["Altitude_Score"] = df["Altitudinal_Range"].map({
-        "<500": 4,
-        "501-1000": 3,
-        "1001-1500": 2,
-        ">1500": 1
-    }).fillna(0) * 1
-
-    df["Exploitation_Score"] = df["Exploitation"].map({
-        "Not exploited": 1,
-        "Local use": 2,
-        "Commercial use": 3
-    }).fillna(0) * 2
-
-    df["Habitat_Score"] = df["Habitat_Specificity"].apply(
-        lambda x: 4 if x == 1 else 3 if x == 2 else 2 if x == 3 else 1
-    ) * 1.5
-
-    df["Use_Score"] = df["Use_Value"].apply(
-        lambda x: 1 if x == 0 else 2 if x == 1 else 3 if x == 2 else 4 if x == 3 else 5
-    ) * 1.5
+    df["Endemism_Score"] = pts["Endemism"] * 3
+    df["Population_Score"] = pts["Population_size"] * 2
+    df["Site_Occupancy_Score"] = pts["Site_occupancy"] * 1.5
+    df["Altitude_Score"] = pts["Altitudinal_Range"] * 1
+    df["Habitat_Score"] = pts["Habitat_Specificity"] * 2
+    df["Exploitation_Score"] = pts["Exploitation"] * 2
+    df["Threat_Score"] = pts["Threat_Level"] * 2
 
     df["Total_Score"] = (
-        df["IUCN_Score"] +
         df["Endemism_Score"] +
-        df["Threat_Score"] +
+        df["Population_Score"] +
+        df["Site_Occupancy_Score"] +
         df["Altitude_Score"] +
-        df["Exploitation_Score"] +
         df["Habitat_Score"] +
-        df["Use_Score"]
+        df["Exploitation_Score"] +
+        df["Threat_Score"]
     )
 
+    # Critical: >75% of max | High: 60-75% | Medium: 45-60% | Low: <45%
     df["Priority"] = df["Total_Score"].apply(
-    lambda x: "Critical" if x >= 43 else
-              "High" if 34 <= x < 43 else
-              "Medium" if 26 <= x < 34 else
-              "Low"
-)
+        lambda x: "Critical" if x > 0.75 * MAX_SCORE else
+                  "High" if x >= 0.60 * MAX_SCORE else
+                  "Medium" if x >= 0.45 * MAX_SCORE else
+                  "Low"
+    )
 
     return df
 
@@ -100,20 +173,42 @@ with tabs[0]:
     uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
 
     if uploaded_file:
-        df = pd.read_csv(uploaded_file)
-        result = score_species(df)
+        try:
+            raw = pd.read_csv(uploaded_file, encoding="utf-8-sig")
+        except UnicodeDecodeError:
+            uploaded_file.seek(0)
+            raw = pd.read_csv(uploaded_file, encoding="cp1252")
 
-        st.dataframe(result[["Species_Name", "Priority"]])
+        df = prepare_columns(raw)
+        missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
 
-        buffer = BytesIO()
-        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-            result.to_excel(writer, index=False, sheet_name="Species Prioritization")
+        if missing:
+            st.error(
+                "Your CSV is missing these columns: " + ", ".join(missing) +
+                ". Download the sample CSV from the Downloads tab to see the expected format."
+            )
+        else:
+            problems = find_unrecognised(df)
+            if not problems.empty:
+                st.warning(
+                    "Some values were not recognised and were scored as 0. "
+                    "Please check the spelling against the sample CSV:"
+                )
+                st.dataframe(problems)
 
-        st.download_button(
-            "Download Prioritization Report (Excel)",
-            data=buffer.getvalue(),
-            file_name="species_prioritization_report.xlsx"
-        )
+            result = score_species(df)
+
+            st.dataframe(result[["Species_Name", "Priority"]])
+
+            buffer = BytesIO()
+            with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+                result.to_excel(writer, index=False, sheet_name="Species Prioritization")
+
+            st.download_button(
+                "Download Prioritization Report (Excel)",
+                data=buffer.getvalue(),
+                file_name="species_prioritization_report.xlsx"
+            )
 
 # ---------------------------------------------------
 # SINGLE SPECIES ENTRY
@@ -125,29 +220,31 @@ with tabs[1]:
 
     with col1:
         species_name = st.text_input("Species Name")
-        iucn = st.selectbox(
-            "IUCN Status",
-            ["Critically Endangered", "Endangered", "Vulnerable",
-             "Near Threatened", "Other"]
+        endemism = st.selectbox(
+            "Endemism",
+            ["Endemic", "Near Endemic", "Non Endemic"]
         )
-        endemism = st.selectbox("Endemism", ["Yes", "No"])
-        threat = st.slider("Threat Level (1–5)", 1, 5, 3)
+        population = st.selectbox(
+            "Population Size (mature individuals)",
+            ["<50", "51-250", "251-500", ">500"]
+        )
+        site = st.number_input(
+            "Site Occupancy (No. of locations)",
+            min_value=1, max_value=1000, value=1
+        )
         altitude = st.selectbox(
-            "Altitudinal Range",
+            "Altitudinal Range (m)",
             ["<500", "501-1000", "1001-1500", ">1500"]
-        )
-        exploitation = st.selectbox(
-            "Exploitation",
-            ["Not exploited", "Local use", "Commercial use"]
         )
         habitat = st.number_input(
             "Habitat Specificity (No. of habitats)",
             min_value=1, max_value=10, value=1
         )
-        use = st.number_input(
-            "Use Value (No. of uses)",
-            min_value=0, max_value=10, value=1
+        exploitation = st.selectbox(
+            "Exploitation",
+            ["Not exploited", "Local use", "Commercial use"]
         )
+        threat = st.slider("Threat Level (1–5)", 1, 5, 3)
 
         run = st.button("Prioritize")
 
@@ -155,13 +252,13 @@ with tabs[1]:
         if run:
             single_df = pd.DataFrame([{
                 "Species_Name": species_name,
-                "IUCN_Status": iucn,
                 "Endemism": endemism,
-                "Threat_Level": threat,
+                "Population_size": population,
+                "Site_occupancy": site,
                 "Altitudinal_Range": altitude,
-                "Exploitation": exploitation,
                 "Habitat_Specificity": habitat,
-                "Use_Value": use
+                "Exploitation": exploitation,
+                "Threat_Level": threat
             }])
 
             single_result = score_species(single_df)
@@ -181,50 +278,22 @@ with tabs[1]:
 # ---------------------------------------------------
 # DOWNLOADS TAB
 # ---------------------------------------------------
+def offer_download(label, filename, mime):
+    """Serve a file that lives in the repo, next to this script."""
+    path = Path(__file__).parent / filename
+    if path.exists():
+        st.download_button(label, data=path.read_bytes(), file_name=filename, mime=mime)
+    else:
+        st.error(f"{filename} was not found in the app folder.")
+
+
 with tabs[2]:
     st.subheader("Download Sample Files")
 
-    # Serve the sample CSV that lives in the repo (same folder as this script)
-    sample_path = Path(__file__).parent / "sample_species_data.csv"
+    offer_download("Download Sample CSV", "sample_species_data.csv", "text/csv")
 
-    st.download_button(
-        "Download Sample CSV",
-        data=sample_path.read_bytes(),
-        file_name="sample_species_data.csv",
-        mime="text/csv"
-    )
-
-    criteria_df = pd.DataFrame({
-        "Criterion": [
-            "IUCN Status", "Endemism", "Threat Level", "Altitudinal Range",
-            "Exploitation", "Habitat Specificity", "Use Value"
-        ],
-        "Description": [
-            "Conservation status of the species",
-            "Whether the species is endemic to the region",
-            "Intensity of threats faced (scale 1–5)",
-            "Altitude where species occurs",
-            "Level of exploitation or use",
-            "Number of habitats the species occupies",
-            "Number of uses by people"
-        ],
-        "Scoring": [
-            "CR=5, EN=4, VU=3, NT=2, Other=1 (×3)",
-            "Yes=2, No=1 (×2)",
-            "Score 1–5 (×3)",
-            "<500=4, 501-1000=3, 1001-1500=2, >1500=1 (×1)",
-            "Not=1, Local=2, Commercial=3 (×2)",
-            "1=4, 2=3, 3=2, >3=1 (×1.5)",
-            "0=1, 1=2, 2=3, 3=4, >3=5 (×1.5)"
-        ]
-    })
-
-    buffer = BytesIO()
-    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-        criteria_df.to_excel(writer, index=False, sheet_name="Criteria")
-
-    st.download_button(
+    offer_download(
         "Download Criteria Guide (Excel)",
-        data=buffer.getvalue(),
-        file_name="criteria_species_priority.xlsx"
+        "criteria_species_priority.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )

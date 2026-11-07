@@ -13,15 +13,15 @@ It prioritizes plant species based on multiple ecological and socio-economic cri
 ---
 
 ## 🔬 Criteria Used
-- IUCN Conservation Status  
-- Endemism  
-- Threat Level  
-- Altitudinal Range  
-- Exploitation Pressure  
-- Habitat Specificity  
-- Use Value  
+- Endemism (×3)  
+- Population Size (×2)  
+- Site Occupancy (×1.5)  
+- Altitudinal Range (×1)  
+- Habitat Specificity (×2)  
+- Exploitation (×2)  
+- Threat Level (×2)  
 
-Each criterion is weighted to compute an overall **priority class** (Critical, High, Medium, Low).
+Each criterion is weighted to give a total score out of 51, which is converted to a **priority class**: Critical (>75% of maximum), High (60–75%), Medium (45–60%), Low (<45%).
 
 ---
 
